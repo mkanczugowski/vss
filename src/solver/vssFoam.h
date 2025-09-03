@@ -1,4 +1,4 @@
-#define SOILFOAM_DEBUG
+#undef VSSFOAM_DEBUG
 
 #include <iomanip>
 
@@ -8,10 +8,8 @@
 #include "pisoControl.H"
 #include "argList.H"
 
-//#ifdef SOILFOAM_DEBUG
 #include "wallFvPatch.H"
 #include "OFstream.H"
-//#endif
 
 #ifdef ADAPTIVE_MESH
 #include "dynamicFvMesh.H"
@@ -34,7 +32,6 @@
 
 using namespace Soil::RetentionModels;
 
-// https://openfoamwiki.net/index.php/OpenFOAM_guide/The_PISO_algorithm_in_OpenFOAM#Case_C
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #define get_str(str) #str
@@ -42,6 +39,8 @@ using namespace Soil::RetentionModels;
 int main(int argc, char *argv[])
 {  
     argList::addBoolOption("shp-debug", "Save SHP debug information and exit", false);
+    argList::addBoolOption("skip-mb-check", "Skip mass-balance check", false);
+    argList::addBoolOption("force-flushing-output", "If enabled the OFstream flushing is forced at each timestep", false);
 
 #include "setRootCase.H"
 #include "createTime.H"
@@ -62,8 +61,10 @@ int main(int argc, char *argv[])
     );
 
     simConfig config(transportProperties);    
-    const bool shpdebug = args.found("shp-debug");
-    config.algorithm.setShpDebug(shpdebug);
+    const bool is_shp_debug = args.found("shp-debug");
+    const bool is_skip_mbs = args.found("skip-mb-check");
+    const bool is_force_flush = args.found("force-flushing-output");
+    config.algorithm.setShpDebug(is_shp_debug);
     
 
 
@@ -107,25 +108,28 @@ int main(int argc, char *argv[])
     magGradH.write();
 #endif
 
-    //simpleControl simple(mesh);
-
-
-//#ifdef SOILFOAM_DEBUG // MBC
     // START - MBC initialization
-    OFstream LogMBC("mass_balance_check.csv");
     scalar mbcTotalInflow = 0;
     scalar mbcInitialTWC = 0;
     scalar mbcOldTimestepTWC = 0;
-    forAll(mesh.C(), celli)
-    {
-        mbcInitialTWC += Theta[celli] * mesh.V()[celli];
+    OFstream LogMBC("mass_balance_check.csv");
+    
+    if (!is_skip_mbs) {
+        forAll(mesh.C(), celli)
+        {
+            mbcInitialTWC += Theta[celli] * mesh.V()[celli];
+        }
+
+        reduce(mbcInitialTWC, sumOp<scalar>());
+
+        mbcOldTimestepTWC = mbcInitialTWC;
+
+        if (Pstream::master())
+        {
+            LogMBC << "Time;mbcTimestepError;mbcTimestepErrorRelative;mbcError;mbcErrorRelative;mbcErrorCelia;mbcErrorCeliaTimestep;mbcDiffTWC;mbcDiffRelativeTWC;mbcTotalInflow;mbcDiffTWCTimestep;mbcTimestepInflow;" <<config.algorithm.getMbcHeaderInfo().c_str()<<nl;
+        }
     }
-    mbcOldTimestepTWC = mbcInitialTWC;
-    LogMBC << "Time;mbcTimestepError;mbcTimestepErrorRelative;mbcError;mbcErrorRelative;mbcErrorCelia;mbcErrorCeliaTimestep;mbcDiffTWC;mbcDiffRelativeTWC;mbcTotalInflow;mbcDiffTWCTimestep;mbcTimestepInflow;" <<config.algorithm.getMbcHeaderInfo().c_str()<<nl;
-    // STOP - MBC initialization
-//#endif
-
-
+     // STOP - MBC initialization
 
     Info << "\nCalculating soil potential distribution\n"
          << nl;
@@ -308,79 +312,92 @@ int main(int argc, char *argv[])
             picard_iter++;
         }
         
-//#ifdef SOILFOAM_DEBUG // MBC
         // START - MBC timestep evaluation
-        scalar mbcTimestepTWC = 0;
-        scalar mbcTimestepInflow = 0;
-        forAll(mesh.C(), celli)
-        {
-            mbcTimestepTWC += Theta[celli] * mesh.V()[celli];
-        }
-
-        // evaluate boundary fluxes
-        const fvPatchList &patches = mesh.boundary();
-        forAll(patches, patchi)
-        {
-            const fvPatch &currPatch = patches[patchi];
-            // Info<<"(MBC)     "<<"Patch name: "<<currPatch.name()<<nl;
-            if (isType<wallFvPatch>(currPatch) == true)
+        
+        if (!is_skip_mbs) {
+            scalar mbcTimestepTWC = 0;
+            scalar mbcTimestepInflow = 0;
+            forAll(mesh.C(), celli)
             {
-                // const UList<label> &bfaceCells = mesh.boundaryMesh()[patchi].faceCells();
-                // Info<<"(MBC)     "<<"    bfaceCells.size():"<<bfaceCells.size()<<nl;
-                // Info<<"(MBC)     "<<"    bfaceCells:"<<bfaceCells<<nl;
-                const scalarField gNorm(currPatch.nf() & (g.value() / mag(g.value())));
-                const scalarField &hWall = static_cast<scalarField>(h.boundaryField()[patchi]);
-                const scalarField &hWallOld = static_cast<scalarField>(h_old.boundaryField()[patchi]);
-                const scalarField &KWall = static_cast<scalarField>(K.boundaryField()[patchi]);
-                const scalarField &KWallOld = static_cast<scalarField>(K_old.boundaryField()[patchi]);
-                forAll(currPatch, facei)
-                {
-                    label faceCelli = currPatch.faceCells()[facei];
-                    scalar grad = (h[faceCelli] - hWall[facei]) * currPatch.deltaCoeffs()[facei] + gNorm[facei];
-                    scalar gradOld = (h_old[faceCelli] - hWallOld[facei]) * currPatch.deltaCoeffs()[facei] + gNorm[facei];
-                    //scalar flux = (grad * (KWall[facei]+K[faceCelli])/2.0 + gradOld * (KWallOld[facei]+K_old[faceCelli])/2.0)/2.0;
-                    //scalar flux = (grad * KWall[facei] + gradOld * KWallOld[facei])/2.0;
-                    scalar flux = grad * KWall[facei];
-                    scalar waterInflow = flux * runTime.deltaT().value() * currPatch.magSf()[facei];
-                    Info << "(MBCTIMESTEP)     " << runTime.value() << " patchi:" << patchi << "  facei:" << facei << "  grad:" << grad << " flux:" << flux << " waterInflow:" << waterInflow << " KWall:" << KWall[facei] << " K:" << K[facei] << nl;
+                mbcTimestepTWC += Theta[celli] * mesh.V()[celli];
+            }
+            reduce(mbcTimestepTWC, sumOp<scalar>());
 
-                    mbcTimestepInflow += waterInflow;
+            // evaluate boundary fluxes
+            const fvPatchList &patches = mesh.boundary();
+            forAll(patches, patchi)
+            {
+                const fvPatch &currPatch = patches[patchi];
+                // Info<<"(MBC)     "<<"Patch name: "<<currPatch.name()<<nl;
+                if (isType<wallFvPatch>(currPatch) == true)
+                {
+                    // const UList<label> &bfaceCells = mesh.boundaryMesh()[patchi].faceCells();
+                    // Info<<"(MBC)     "<<"    bfaceCells.size():"<<bfaceCells.size()<<nl;
+                    // Info<<"(MBC)     "<<"    bfaceCells:"<<bfaceCells<<nl;
+                    const scalarField gNorm(currPatch.nf() & (g.value() / mag(g.value())));
+                    const scalarField &hWall = static_cast<scalarField>(h.boundaryField()[patchi]);
+                    const scalarField &hWallOld = static_cast<scalarField>(h_old.boundaryField()[patchi]);
+                    const scalarField &KWall = static_cast<scalarField>(K.boundaryField()[patchi]);
+                    const scalarField &KWallOld = static_cast<scalarField>(K_old.boundaryField()[patchi]);
+                    forAll(currPatch, facei)
+                    {
+                        label faceCelli = currPatch.faceCells()[facei];
+                        scalar grad = (h[faceCelli] - hWall[facei]) * currPatch.deltaCoeffs()[facei] + gNorm[facei];
+                        scalar gradOld = (h_old[faceCelli] - hWallOld[facei]) * currPatch.deltaCoeffs()[facei] + gNorm[facei];
+                        //scalar flux = (grad * (KWall[facei]+K[faceCelli])/2.0 + gradOld * (KWallOld[facei]+K_old[faceCelli])/2.0)/2.0;
+                        //scalar flux = (grad * KWall[facei] + gradOld * KWallOld[facei])/2.0;
+                        scalar flux = grad * KWall[facei];
+                        scalar waterInflow = flux * runTime.deltaT().value() * currPatch.magSf()[facei];
+                        #ifdef VSSFOAM_DEBUG 
+                            //Info << "(MBCTIMESTEP)     " << runTime.value() << " patchi:" << patchi << "  facei:" << facei << "  grad:" << grad << " flux:" << flux << " waterInflow:" << waterInflow << " KWall:" << KWall[facei] << " K:" << K[facei] << nl;
+                        #endif
+                    
+                        mbcTimestepInflow += waterInflow;
+                    }
+                }
+            }
+            reduce(mbcTimestepInflow, sumOp<scalar>());
+            mbcTotalInflow += mbcTimestepInflow;
+            reduce(mbcTotalInflow, sumOp<scalar>());
+            scalar mbcError = mbcTotalInflow - ( mbcInitialTWC - mbcTimestepTWC );
+            scalar mbcDiffTWC = mbcInitialTWC - mbcTimestepTWC;
+            scalar mbcDiffTWCTimestep = mbcOldTimestepTWC - mbcTimestepTWC;
+
+            scalar mbcErrorRelative = -999;
+            scalar mbcDiffRelativeTWC = -999;
+            if (mbcInitialTWC != 0.0) {   
+                mbcErrorRelative = mbcError / mbcInitialTWC;
+                mbcDiffRelativeTWC = mbcDiffTWC / mbcInitialTWC;
+            }
+
+            scalar mbcErrorCelia = -999;
+            if (mbcTimestepInflow != 0.0) {
+                mbcErrorCelia = (mbcInitialTWC - mbcTimestepTWC)/mbcTotalInflow;
+            }
+
+            scalar mbcErrorCeliaTimestep = -999;
+            scalar mbcTimestepError = -999;
+            if (mbcTimestepInflow != 0.0) {
+                mbcErrorCeliaTimestep = (mbcOldTimestepTWC - mbcTimestepTWC)/mbcTimestepInflow;
+                mbcTimestepError = mbcOldTimestepTWC - mbcTimestepTWC - mbcTimestepInflow;
+            }
+
+            scalar mbcTimestepErrorRelative = -999;
+            if (mbcOldTimestepTWC != 0.0) {
+                mbcTimestepErrorRelative = mbcTimestepError / mbcOldTimestepTWC;
+            }
+            
+            mbcOldTimestepTWC = mbcTimestepTWC;
+
+            if (Pstream::master())
+            {
+                LogMBC << runTime.value() << ";" << mbcTimestepError << ";" << mbcTimestepErrorRelative << ";" << mbcError << ";" << mbcErrorRelative << ";" << mbcErrorCelia << ";" << mbcErrorCeliaTimestep << ";" << mbcDiffTWC << ";" << mbcDiffRelativeTWC << ";" << mbcTotalInflow << ";" << mbcDiffTWCTimestep << ";" << mbcTimestepInflow<< ";" <<config.algorithm.getMbcRowInfo().c_str()<< nl;
+                if (is_force_flush) {
+                    LogMBC.flush();
                 }
             }
         }
-        mbcTotalInflow += mbcTimestepInflow;
-        scalar mbcError = mbcTotalInflow - ( mbcInitialTWC - mbcTimestepTWC );
-        scalar mbcDiffTWC = mbcInitialTWC - mbcTimestepTWC;
-        scalar mbcDiffTWCTimestep = mbcOldTimestepTWC - mbcTimestepTWC;
-
-        scalar mbcErrorRelative = -999;
-        scalar mbcDiffRelativeTWC = -999;
-        if (mbcInitialTWC != 0.0) {   
-            mbcErrorRelative = mbcError / mbcInitialTWC;
-            mbcDiffRelativeTWC = mbcDiffTWC / mbcInitialTWC;
-        }
-
-        scalar mbcErrorCelia = -999;
-        if (mbcTimestepInflow != 0.0) {
-            mbcErrorCelia = (mbcInitialTWC - mbcTimestepTWC)/mbcTotalInflow;
-        }
-
-        scalar mbcErrorCeliaTimestep = -999;
-        scalar mbcTimestepError = -999;
-        if (mbcTimestepInflow != 0.0) {
-            mbcErrorCeliaTimestep = (mbcOldTimestepTWC - mbcTimestepTWC)/mbcTimestepInflow;
-            mbcTimestepError = mbcOldTimestepTWC - mbcTimestepTWC - mbcTimestepInflow;
-        }
-
-        scalar mbcTimestepErrorRelative = -999;
-        if (mbcOldTimestepTWC != 0.0) {
-            mbcTimestepErrorRelative = mbcTimestepError / mbcOldTimestepTWC;
-        }
-        
-        mbcOldTimestepTWC = mbcTimestepTWC;
-        LogMBC << runTime.value() << ";" << mbcTimestepError << ";" << mbcTimestepErrorRelative << ";" << mbcError << ";" << mbcErrorRelative << ";" << mbcErrorCelia << ";" << mbcErrorCeliaTimestep << ";" << mbcDiffTWC << ";" << mbcDiffRelativeTWC << ";" << mbcTotalInflow << ";" << mbcDiffTWCTimestep << ";" << mbcTimestepInflow<< ";" <<config.algorithm.getMbcRowInfo().c_str()<< nl;
         // STOP - MBC timestep evaluation
-//#endif
 
 #ifdef ADAPTIVE_MESH
         magGradH = mag(fvc::grad(h));

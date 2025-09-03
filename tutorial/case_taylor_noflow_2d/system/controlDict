@@ -16,7 +16,7 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 libs (
-      "libsoilFoam.so"
+      "libvssFOAM.so"
      );
 
 application     richardsFoam;

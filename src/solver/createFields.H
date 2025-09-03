@@ -192,7 +192,7 @@ if (config.algorithm.getShpDebug()) {
 }
 
 
-#ifdef SOILFOAM_DEBUG
+#ifdef VSSFOAM_DEBUG
 
 volVectorField fluxWater(
     IOobject(

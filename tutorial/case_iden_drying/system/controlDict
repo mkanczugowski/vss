@@ -16,10 +16,10 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 libs (
-      "libsoilFoam.so"
+      "libvssFOAM.so"
      );
 
-application     soilFoam;
+application     vssFOAM;
 
 startFrom       latestTime;
 

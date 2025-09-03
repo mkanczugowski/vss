@@ -2,8 +2,8 @@
 cd ${0%/*} || exit 1    # run from this directory
 makeType=${1:-libso}
 
-wclean solver/soilFoam
-wclean solver/soilDyMFoam
+wclean solver/vssFoam
+wclean solver/vssDyMFoam
 wclean $makeType library
 
 find . -name "*.dep" -delete

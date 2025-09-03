@@ -2,7 +2,7 @@ if (runTime.writeTime())
 {
     runTime.write();
 
-#ifdef SOILFOAM_DEBUG
+#ifdef VSSFOAM_DEBUG
     gradH = fvc::grad(h);
 
     gradHx = gradH.component(vector::X);

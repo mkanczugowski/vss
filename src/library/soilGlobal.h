@@ -3,7 +3,7 @@
 
 #include "fvCFD.H"
 
-#ifdef SOILFOAM_DEBUG
+#ifdef VSSFOAM_DEBUG
 #define DEBUG(x)         \
     do                   \
     {                    \

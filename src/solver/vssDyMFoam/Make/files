@@ -1,0 +1,2 @@
+vssDyMFoam.C
+EXE = $(OF_APPBIN_DIR)/vssDyMFoam

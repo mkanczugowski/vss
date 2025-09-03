@@ -16,8 +16,8 @@ namespace Foam
     {
         // Private data
         scalar wind_speed_;             // Wind speed
-        scalarField surface_roughness_; // Surface roughness length
-        scalarField reference_level_;   // Reference level, the Z(vertical) coordinate of the reference level (to calculate the distance from soil surface)
+        scalar surface_roughness_; // Surface roughness length
+        scalar reference_level_;   // Reference level, the Z(vertical) coordinate of the reference level (to calculate the distance from soil surface)
         scalar air_temperature_;        // Air temperature at the reference height (in Celsius)
         scalar soil_temperature_drop_;  // Assumed soil surface temperature drop in relation to air temperature (in Celsius)
         bool is_first_run = true;

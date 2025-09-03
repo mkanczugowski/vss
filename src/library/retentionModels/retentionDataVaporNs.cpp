@@ -1,6 +1,8 @@
 #include "retentionDataVaporNs.h"
 #include "soilPhysics.h"
 
+#undef VSSFOAM_DEBUG
+
 using namespace Soil::RetentionModels;
 using namespace Soil::Physics;
 
@@ -50,13 +52,17 @@ namespace Soil::RetentionModels
     volScalarField &retentionDataVaporNs::Kv(const volScalarField &h, volScalarField &Kv)
     {
         volScalarField &soil_temp = getSoilTemp();
-        Info<<"soil_tmp"<<soil_temp<<nl;
         volScalarField soil_theta = retentionDataInterface::Theta(h);
-        Info<<"soil_theta"<<soil_theta<<nl;
         volScalarField &shp_ret_total_por = getShpRetTotalPor();
-        Info<<"shp_ret_total_por"<<shp_ret_total_por<<nl;
         Kv = vaporSoilDiffusivity(soil_temp, soil_theta, shp_ret_total_por) * saturatedVaporDensity(soil_temp) * soilPoreRelativeHumidity(soil_temp, h) * Soil::Physics::Constants::g / (Soil::Physics::Constants::Rsv * soil_temp * specificWaterDensity(soil_temp));
-        Info<<"Kv"<<Kv<<nl;
+         
+        #ifdef VSSFOAM_DEBUG
+            Info<<"soil_tmp"<<soil_temp<<nl;
+            Info<<"soil_theta"<<soil_theta<<nl;
+            Info<<"shp_ret_total_por"<<shp_ret_total_por<<nl; 
+            Info<<"Kv"<<Kv<<nl;
+        #endif
+
         return Kv;
     }
 
