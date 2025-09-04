@@ -221,7 +221,6 @@ int main(int argc, char *argv[])
                         );
                         hEqn.solve();
                     }
-                    //    p_rghEqn.solve(mesh.solver(p_rgh.select(PISO.finalInnerIter())));
 
                     if (piso.finalNonOrthogonalIter())
                     {
@@ -328,12 +327,16 @@ int main(int argc, char *argv[])
             forAll(patches, patchi)
             {
                 const fvPatch &currPatch = patches[patchi];
-                // Info<<"(MBC)     "<<"Patch name: "<<currPatch.name()<<nl;
+                #ifdef VSSFOAM_DEBUG 
+                    Info<<"(MBC)     "<<"Patch name: "<<currPatch.name()<<nl;
+                #endif
                 if (isType<wallFvPatch>(currPatch) == true)
                 {
-                    // const UList<label> &bfaceCells = mesh.boundaryMesh()[patchi].faceCells();
-                    // Info<<"(MBC)     "<<"    bfaceCells.size():"<<bfaceCells.size()<<nl;
-                    // Info<<"(MBC)     "<<"    bfaceCells:"<<bfaceCells<<nl;
+                    #ifdef VSSFOAM_DEBUG 
+                        const UList<label> &bfaceCells = mesh.boundaryMesh()[patchi].faceCells();
+                        Info<<"(MBC)     "<<"    bfaceCells.size():"<<bfaceCells.size()<<nl;
+                        Info<<"(MBC)     "<<"    bfaceCells:"<<bfaceCells<<nl;
+                    #endif
                     const scalarField gNorm(currPatch.nf() & (g.value() / mag(g.value())));
                     const scalarField &hWall = static_cast<scalarField>(h.boundaryField()[patchi]);
                     const scalarField &hWallOld = static_cast<scalarField>(h_old.boundaryField()[patchi]);
@@ -344,12 +347,10 @@ int main(int argc, char *argv[])
                         label faceCelli = currPatch.faceCells()[facei];
                         scalar grad = (h[faceCelli] - hWall[facei]) * currPatch.deltaCoeffs()[facei] + gNorm[facei];
                         scalar gradOld = (h_old[faceCelli] - hWallOld[facei]) * currPatch.deltaCoeffs()[facei] + gNorm[facei];
-                        //scalar flux = (grad * (KWall[facei]+K[faceCelli])/2.0 + gradOld * (KWallOld[facei]+K_old[faceCelli])/2.0)/2.0;
-                        //scalar flux = (grad * KWall[facei] + gradOld * KWallOld[facei])/2.0;
                         scalar flux = grad * KWall[facei];
                         scalar waterInflow = flux * runTime.deltaT().value() * currPatch.magSf()[facei];
                         #ifdef VSSFOAM_DEBUG 
-                            //Info << "(MBCTIMESTEP)     " << runTime.value() << " patchi:" << patchi << "  facei:" << facei << "  grad:" << grad << " flux:" << flux << " waterInflow:" << waterInflow << " KWall:" << KWall[facei] << " K:" << K[facei] << nl;
+                            Info << "(MBCTIMESTEP)     " << runTime.value() << " patchi:" << patchi << "  facei:" << facei << "  grad:" << grad << " flux:" << flux << " waterInflow:" << waterInflow << " KWall:" << KWall[facei] << " K:" << K[facei] << nl;
                         #endif
                     
                         mbcTimestepInflow += waterInflow;
@@ -358,32 +359,32 @@ int main(int argc, char *argv[])
             }
             reduce(mbcTimestepInflow, sumOp<scalar>());
             mbcTotalInflow += mbcTimestepInflow;
-            reduce(mbcTotalInflow, sumOp<scalar>());
             scalar mbcError = mbcTotalInflow - ( mbcInitialTWC - mbcTimestepTWC );
             scalar mbcDiffTWC = mbcInitialTWC - mbcTimestepTWC;
             scalar mbcDiffTWCTimestep = mbcOldTimestepTWC - mbcTimestepTWC;
 
             scalar mbcErrorRelative = -999;
             scalar mbcDiffRelativeTWC = -999;
-            if (mbcInitialTWC != 0.0) {   
+            if (mbcInitialTWC > DBL_MIN) {   
+                Info<<mbcError<<"  "<<mbcInitialTWC<<nl;
                 mbcErrorRelative = mbcError / mbcInitialTWC;
                 mbcDiffRelativeTWC = mbcDiffTWC / mbcInitialTWC;
             }
 
             scalar mbcErrorCelia = -999;
-            if (mbcTimestepInflow != 0.0) {
+            if (abs(mbcTimestepInflow) > DBL_MIN) {
                 mbcErrorCelia = (mbcInitialTWC - mbcTimestepTWC)/mbcTotalInflow;
             }
 
             scalar mbcErrorCeliaTimestep = -999;
             scalar mbcTimestepError = -999;
-            if (mbcTimestepInflow != 0.0) {
+            if (abs(mbcTimestepInflow ) > DBL_MIN) {
                 mbcErrorCeliaTimestep = (mbcOldTimestepTWC - mbcTimestepTWC)/mbcTimestepInflow;
                 mbcTimestepError = mbcOldTimestepTWC - mbcTimestepTWC - mbcTimestepInflow;
             }
 
             scalar mbcTimestepErrorRelative = -999;
-            if (mbcOldTimestepTWC != 0.0) {
+            if (abs(mbcOldTimestepTWC) > DBL_MIN) {
                 mbcTimestepErrorRelative = mbcTimestepError / mbcOldTimestepTWC;
             }
             
@@ -408,12 +409,6 @@ int main(int argc, char *argv[])
         Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
              << "  ClockTime = " << runTime.elapsedClockTime() << " s"
              << nl << nl;
-
-        // if (getFieldValueAtHeight(h, mesh, 0.025277778) < min(retentionModel->getShpHa()).value())
-        // {   
-        //     Info<<"Simulation stopped due to achieving h_a potential."<<nl;
-        //     return 0;
-        // } 
         
         runTime.printExecutionTime(Info);
     }
