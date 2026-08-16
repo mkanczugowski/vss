@@ -1,15 +1,25 @@
 EXE_INC = 	\
-    		-DFULLDEBUG -g -O0 -Wno-old-style-cast -fpermissive \
-            -I/usr/include/boost169 \
+    		$(WM_DEBUG_FLAGS) \
+			-fpermissive \
+			-fcompare-debug-second \
+			-Wno-old-style-cast -Wno-unused-variable -Wno-overloaded-virtual \
+            -I/usr/include/boost \
+			-I$(LIB_SRC)/OpenFOAM/lnInclude \
+            -I$(LIB_SRC)/OSspecific/POSIX/lnInclude \
 			-I$(LIB_SRC)/finiteVolume/lnInclude \
 		  	-I$(LIB_SRC)/meshTools/lnInclude \
     		-I$(LIB_SRC)/dynamicMesh/lnInclude \
     		-I$(LIB_SRC)/dynamicFvMesh/lnInclude \
 			-I../lnInclude \
 			-I../../library/lnInclude \
-            -I/usr/include/eigen3 
+            -I../../library/external/interpolate/src/libInterpolate \
+            -I../../library/external/interpolate/src/libInterpolate/Interpolators/_1D \
+            -I../../library/external/interpolate/src/libInterpolate/Interpolators/_2D \
+            -I../../library/external/interpolate/src/libInterpolate/Utils \
+            -I/usr/include/eigen3
 
-EXE_LIBS = 	-lfiniteVolume \
+EXE_LIBS = 	-L$(OF_LIBBIN_DIR) \
+			-lfiniteVolume \
     		-ldynamicMesh \
     		-ldynamicFvMesh \
 			-lvssFoam

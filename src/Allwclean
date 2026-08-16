@@ -9,6 +9,5 @@ wclean $makeType library
 find . -name "*.dep" -delete
 find . -name "*.o" -delete
 
-wmakeLnInclude  -u library
-wmakeLnInclude  -u solver
+rm -rf library/lnInclude solver/lnInclude
 # ----------------------------------------------------------------- end-of-file

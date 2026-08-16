@@ -1,14 +1,22 @@
 EXE_INC =  	\
-    		-DFULLDEBUG -g -O0 -Wno-old-style-cast -fpermissive \
-            -I/usr/include/boost169 \
+    		$(WM_DEBUG_FLAGS) \
+    		-fpermissive \
+			-fcompare-debug-second \
+    		-Wno-address -Wno-nonnull-compare \
+    		-Wno-unused-variable -Wno-old-style-cast \
+    		-Wno-reorder -Wno-overloaded-virtual \
+            -I/usr/include/boost \
+            -I$(LIB_SRC)/OpenFOAM/lnInclude \
+            -I$(LIB_SRC)/OSspecific/POSIX/lnInclude \
+            -I./external/interpolate/src/libInterpolate \
+            -I./external/interpolate/src/libInterpolate/Interpolators/_1D \
+            -I./external/interpolate/src/libInterpolate/Interpolators/_2D \
+            -I./external/interpolate/src/libInterpolate/Utils \
             -I$(LIB_SRC)/finiteVolume/lnInclude \
 		  	-I$(LIB_SRC)/meshTools/lnInclude \
             -I$(LIB_SRC)/triSurface/lnInclude \
-            -I/usr/include/eigen3 
+            -I/usr/include/eigen3
 
 LIB_LIBS = -lOpenFOAM \
-           -lmeshTools	\
-           -lfiniteVolume 
-
-
-EXE_DEBUG = -DFULLDEBUG -g -O0 -Wno-old-style-cast
+           -lmeshTools \
+           -lfiniteVolume

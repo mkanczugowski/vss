@@ -1,17 +1,59 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+title: Virtual Soil Simulator (VSS)
+message: >-
+  If you use this software, please cite both the software
+  and the related paper below.
+type: software
 authors:
-- family-names: "Lamorski"
-  given-names: "Krzysztof"
-  orcid: "https://orcid.org/0000-0001-9678-541X"
-- family-names: "Kozyra"
-  given-names: "Maciej"
-  orcid: "https://orcid.org/0009-0002-0236-8696"
-- family-names: "Sławiński"
-  given-names: "Cezary"
-  orcid: "https://orcid.org/0000-0003-1083-1644"
-title: "My Research Software"
-version: 1.0.0
+  - family-names: Lamorski
+    given-names: Krzysztof
+    email: k.lamorski@ipan.lublin.pl
+    affiliation: >-
+      Institute of Agrophysics, Polish Academy of Sciences,
+      Lublin, Poland
+    orcid: 'https://orcid.org/0000-0001-9678-541X'
+  - family-names: Kozyra
+    given-names: Maciej
+    affiliation: >-
+      Institute of Agrophysics, Polish Academy of Sciences,
+      Lublin, Poland
+    orcid: 'https://orcid.org/0009-0002-0236-8696'
+  - family-names: Sławiński
+    given-names: Cezary
+    affiliation: >-
+      Institute of Agrophysics, Polish Academy of Sciences,
+      Lublin, Poland
+    orcid: 'https://orcid.org/0000-0003-1083-1644'
+url: 'https://github.com/klamorski/vss'
+abstract: |2-
+  Virtual Soil Simulator (VSS) is an open-source finite volume method solver
+  for water transport in unsaturated porous media, built as a custom solver
+  within the OpenFOAM framework. It implements Richards' equation extended with
+  thin-film flow and isothermal vapor transport phenomena, enabling simulation
+  of water movement in soils under complex hydraulic conditions.
+version: 1.0.2
+date-released: '2026-08-14'
 doi: 10.5281/zenodo.16816892
-date-released: 2025-08-12
-url: "https://github.com/klamorski/vss"
+preferred-citation:
+  type: article
+  title: >-
+    Virtual Soil Simulator—Finite Volume Method Implementation for the
+    Unsaturated Porous Media Water Transport Model Including Film Flow and
+    Isothermal Vapor Transport Phenomena
+  authors:
+    - family-names: Kozyra
+      given-names: Maciej
+      affiliation: 'Institute of Agrophysics, Polish Academy of Sciences, Lublin, Poland'
+      orcid: 'https://orcid.org/0009-0002-0236-8696'
+    - family-names: Lamorski
+      given-names: Krzysztof
+      email: k.lamorski@ipan.lublin.pl
+      affiliation: 'Institute of Agrophysics, Polish Academy of Sciences, Lublin, Poland'
+      orcid: 'https://orcid.org/0000-0001-9678-541X'
+    - family-names: Sławiński
+      given-names: Cezary
+      affiliation: 'Institute of Agrophysics, Polish Academy of Sciences, Lublin, Poland'
+      orcid: 'https://orcid.org/0000-0003-1083-1644'
+  journal: Journal of Advances in Modeling Earth Systems
+  doi: 10.1029/2025MS005421
+  year: 2026

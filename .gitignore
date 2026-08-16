@@ -1,0 +1,19 @@
+# OpenFOAM compiled output — platform-specific build directories inside Make/
+src/*/Make/linux*/
+src/*/*/Make/linux*/
+
+# Symlinked header directories created by wmakeLnInclude
+src/*/lnInclude/
+src/*/*/lnInclude/
+
+# Tutorial case runtime output
+tutorial/*/[0-9]*/
+tutorial/*/[0-9].[0-9]*/
+tutorial/*/processor*/
+tutorial/*/probes*/
+tutorial/*/postProcessing/
+tutorial/*/dynamicCode/
+tutorial/*/constant/polyMesh/
+tutorial/*/log.txt
+tutorial/*/mass_balance_check.csv
+tutorial/*/*~

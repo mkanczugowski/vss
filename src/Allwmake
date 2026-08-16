@@ -1,25 +1,48 @@
 #!/bin/sh
-cd ${0%/*} || exit 1    # run from this directory
-makeType=${1:-libso}
+cd ${0%/*} || exit 1    # run from script location directory
 
-wmakeLnInclude  library
+. ./build.cfg           # load build configuration
+
+case "$buildMode" in
+    debug)
+        export WM_DEBUG_FLAGS="-DFULLDEBUG -g -O0"
+        ;;
+    opt)
+        export WM_DEBUG_FLAGS=
+        ;;
+    *)
+        echo "Unknown buildMode '$buildMode' in build.cfg. Use 'opt' or 'debug'." >&2
+        exit 1
+        ;;
+esac
+
+export WM_NCOMPPROCS=$noCompileCPU
+
+if [ "$installGlobal" = true ]; then
+    export OF_APPBIN_DIR=$FOAM_APPBIN
+    export OF_LIBBIN_DIR=$FOAM_LIBBIN
+    if [ ! -w "$OF_APPBIN_DIR" ] || [ ! -w "$OF_LIBBIN_DIR" ]; then
+        echo "Error: no write permission to global OpenFOAM directories:" >&2
+        echo "  $OF_APPBIN_DIR" >&2
+        echo "  $OF_LIBBIN_DIR" >&2
+        echo "Re-run $0 as root if you wish install it globally." >&2
+        echo "Consider local installation instead (see build.cfg)." >&2
+        exit 1
+    fi
+else
+    export OF_APPBIN_DIR=$FOAM_USER_APPBIN
+    export OF_LIBBIN_DIR=$FOAM_USER_LIBBIN
+fi
+
+wmakeLnInclude  library 2>&1 | grep -v "File exists" >&2
+# external/ headers are included via relative paths, so drop their symlinks
+find library/lnInclude -type l | while IFS= read -r lnk; do
+    case "$(readlink "$lnk")" in *external/*) rm "$lnk" ;; esac
+done
 wmakeLnInclude  solver
-
-export WM_NCOMPPROCS=6
-
-#use global binary paths
-export OF_APPBIN_DIR=$FOAM_APPBIN
-export OF_LIBBIN_DIR=$FOAM_LIBBIN
-
-#use local library paths
-# export OF_APPBIN_DIR=$FOAM_USER_APPBIN
-# export OF_LIBBIN_DIR=$FOAM_USER_LIBBIN
-
 
 wmake $makeType library
 wmake solver/vssFoam
 wmake solver/vssDyMFoam
-
-doxygen ../.doxygen_cfg > /dev/null 2>&1
 
 # ----------------------------------------------------------------- end-of-file
