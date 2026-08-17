@@ -1,2 +1,2 @@
 vssFoam.C
-EXE = $(OF_APPBIN_DIR)/vssFOAM
+EXE = $(FOAM_USER_APPBIN)/vssFOAM
