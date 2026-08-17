@@ -18,7 +18,8 @@ EXE_INC = 	\
             -I../../library/external/interpolate/src/libInterpolate/Utils \
             -I/usr/include/eigen3
 
-EXE_LIBS = 	-L$(OF_LIBBIN_DIR) \
+EXE_LIBS = 	-L$(FOAM_USER_LIBBIN) \
+			-L$(OF_LIBBIN_DIR) \
 			-lfiniteVolume \
     		-ldynamicMesh \
     		-ldynamicFvMesh \
