@@ -26,4 +26,4 @@ simConfig.cpp
 solverFunctions.cpp
 
 
-LIB = $(OF_LIBBIN_DIR)/libvssFoam
+LIB = $(FOAM_USER_LIBBIN)/libvssFoam
